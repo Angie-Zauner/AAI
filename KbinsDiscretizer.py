@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.preprocessing import KBinsDiscretizer
 
-def discretize_fit(df, columns, nbins):
+def discretize_fit(df, columns, nbins, transform = False):
     """
     Fit a KBinsDiscretizer to the specified columns of the DataFrame using quantile.
 
@@ -38,6 +38,10 @@ def discretize_fit(df, columns, nbins):
     # FIT THE DISCRETIZER
     discretizer = KBinsDiscretizer(n_bins=nbins, encode='ordinal', strategy='quantile')
     discretizer.fit(df[columns])
+
+    if transform == True:
+        return discretizer, discretize_transform(df, columns, discretizer)
+
     return discretizer
 
 
