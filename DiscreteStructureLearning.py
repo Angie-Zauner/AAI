@@ -14,8 +14,9 @@ def save_structure(edges, title, file_name):
     plt.savefig(file_name, dpi=300, bbox_inches='tight')
     print("DAG for %s available at %s\n" % (title, file_name))
 
-def structure_learning(training_data, method_type, scoring_function, max_iterations, visualise_structure=True, dataset_name="dataset"):
-    
+
+
+def structure_learning(training_data, method_type="hc", scoring_function="bic" ,max_iterations=200000, visualise_structure=True, dataset_name="dataset"):
     model = bn.structure_learning.fit(training_data, methodtype=method_type, scoretype=scoring_function, max_iter=max_iterations)
     print("model [%s]=%s" % (method_type, model))
     print("num_model_edges [%s]=%s" % (method_type, len(model['model_edges'])))
