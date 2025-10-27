@@ -63,13 +63,13 @@ def infer_and_evaluate(test_set, model, model_name='BayesianNetwork', labels = F
     # Output
     results = {
         "Model": model_name,
-        "Balanced Accuracy": bal_acc,
-        "F1 Score": f1,
-        "AUC": auc,
-        "Brier Score": brier,
-        "KL Divergence": kl_div,
-        "Expected Calibration Loss": ec_loss,
-        "Inference Time (s)": inference_time
+        "Balanced Accuracy": round(bal_acc, 4),
+        "F1 Score": round(f1, 4),
+        "AUC": round(auc, 4),
+        "Brier Score": round(brier, 4),
+        "KL Divergence": round(kl_div, 4),
+        "Expected Calibration Loss": round(ec_loss, 4),
+        "Inference Time (s)": f"{round(inference_time, 4)} s"
     }
 
     if labels:
