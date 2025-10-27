@@ -1,11 +1,11 @@
-import DiscreteStructureLearning
-import Inference
-import KbinsDiscretizer
+from DiscreteStructureLearning import *
+from Inference import *
+from KbinsDiscretizer import *
 import pandas as ps
 import numpy as np
 import bnlearn as bn
 
-def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins,  naive=False):
+def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins, method, scoring, max_iter, naive=False):
     
     """
     Full Bayesian Network pipeline: discretization, structure learning (or naive),
@@ -35,6 +35,8 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins,  naive=Fal
     metrics : dict
         Evaluation metrics from the inference step.
     """
+
+    #-----------------------
     # STEP 0: DISCRETIZATION
 
     # Fit the discretizer on the training set using cont_columns and nbins
@@ -44,18 +46,37 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins,  naive=Fal
     test = discretize_transform(test_set, cont_columns, discretizer)
 
 
-    # STEP 1:
+    #---------------------------
+    # STEP 1: STRUCTURE LEARNING
 
+    # Naive Bayes
     if naive: 
-
         # Define edges 
-        features = [col for col in train_set.columns if col != 'target']
+        features = [col for col in train.columns if col != 'target']
         edges = [(f, 'target') for f in features]
 
         # Make DAG
         structure = bn.make_DAG(edges)
 
+    #BayesianNetwork
     else: 
-        structure = structure_learning(train_set, "hc", "bic", 2000000, dataset_name="Heart", visualise_structure=False)
+        structure = structure_learning(train, method, scoring, max_iter, visualise_structure=False)
 
     
+    #---------------------------
+    # STEP 2: PARAMETER LEARNING
+
+    # Learn parameters
+    model = bn.parameter_learning.fit(structure, train)
+
+
+    #---------------------------
+    # STEP 3: INFERENCE
+    
+    if naive:
+        metrics = infer_and_evaluate(test, model, model_name='NaiveBayes')
+
+    else:
+        metrics = infer_and_evaluate(test, model, model_name='BayesianNetwork')
+    
+    return metrics
