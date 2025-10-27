@@ -1,85 +1,90 @@
-import time, numpy as np, pandas as pd, bnlearn as bn
-from sklearn.metrics import balanced_accuracy_score, roc_auc_score, accuracy_score, log_loss, brier_score_loss
+import numpy as np
+import math
+import time
+from sklearn import metrics
+from sklearn.calibration import calibration_curve
 
-def _extract_pos_proba_from_bn_predict(out, target_col, pos_label):
-    """Prova a estrarre P(target=pos_label) dall'output di bn.predict (DataFrame/dict)."""
-    if isinstance(out, pd.DataFrame):
-        # 1) Colonna esplicita tipo "P(target=pos_label)"
-        col = f"P({target_col}={pos_label})"
-        if col in out.columns:
-            return out[col].to_numpy(dtype=float)
-        # 2) Colonne tipo "target=state" (scegli quella del pos_label)
-        cand = [c for c in out.columns if str(c).startswith(f"{target_col}=")]
-        if cand:
-            cpos = [c for c in cand if str(c).endswith(f"={pos_label}")]
-            if cpos:
-                return out[cpos[0]].to_numpy(dtype=float)
-        # 3) Se c'è la classe MAP (non probabilità), converti a 0/1 (fallback)
-        if target_col in out.columns:
-            return (out[target_col].astype(str) == str(pos_label)).astype(float).to_numpy()
-    elif isinstance(out, dict):
-        for k in ("proba", "prob", "probabilities"):
-            if k in out:
-                return np.asarray(out[k], dtype=float)
-        if "y_pred" in out:
-            return (pd.Series(out["y_pred"]).astype(str) == str(pos_label)).astype(float).to_numpy()
-    raise RuntimeError("Impossibile estrarre P(target=pos_label) dall'output di bn.predict.")
-
-def evaluate_bn(params, test_discrete, target_col, pos_label, threshold=0.5, n_bins=10):
+def evaluate_bn_metrics(Y_true, Y_pred, Y_prob, model_name='BayesianNetwork'):
     """
-    Usa bn.predict per ottenere le proba del target positivo e stampa le metriche richieste.
-    Ritorna (y_pred, y_proba, metrics_dict, test_time_seconds).
+    Calcola le metriche richieste per un modello bayesiano:
+    Balanced Accuracy, F1, AUC, Brier Score, KL Divergence,
+    Expected Calibration Loss e Inference Time.
+
+    Parametri
+    ----------
+    Y_true : array-like
+        Etichette vere.
+    Y_pred : array-like
+        Etichette predette (classi 0/1).
+    Y_prob : array-like
+        Probabilità predette per la classe positiva.
+    model_name : str, opzionale
+        Nome del modello (solo per stampe/log).
+
+    Ritorna
+    -------
+    dict : metriche calcolate.
     """
-    X_test = test_discrete.drop(columns=[target_col])
 
-    t0 = time.time()
-    out = bn.predict(params, X_test, variables=[target_col])
-    secs = time.time() - t0
+    # ========================
+    # Funzione interna: Expected Calibration Loss
+    # ========================
+    def expected_calibration_loss(y_true, y_prob, n_bins=None):
+        if n_bins is None:
+            N = len(y_true)
+            n_bins = math.ceil(math.log2(N) + 1)  # regola di Sturges
 
-    probs = np.clip(_extract_pos_proba_from_bn_predict(out, target_col, pos_label), 1e-12, 1-1e-12)
-    y_true = (test_discrete[target_col].astype(str) == str(pos_label)).astype(int).to_numpy()
-    y_pred = (probs >= float(threshold)).astype(int)
+        prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=n_bins, strategy='uniform')
 
-    # Metriche
-    bal_acc = balanced_accuracy_score(y_true, y_pred)
-    acc     = accuracy_score(y_true, y_pred)
-    try:
-        auc  = roc_auc_score(y_true, probs)
-    except ValueError:
-        auc  = float("nan")  # AUC non definibile se una sola classe nel test
+        bin_counts, _ = np.histogram(y_prob, bins=n_bins, range=(0, 1))
+        nonempty = bin_counts > 0
+        bin_weights = bin_counts[nonempty] / np.sum(bin_counts[nonempty])
 
-    # KL divergence media (vs one-hot) = cross-entropy (nats)
-    kl_div = log_loss(y_true, np.c_[1 - probs, probs], labels=[0, 1])
-    brier  = brier_score_loss(y_true, probs)
+        # Expected Calibration Loss
+        return np.sum(bin_weights * np.abs(prob_true - prob_pred))
 
-    # Expected Calibration Error (ECE) con n_bins uniformi
-    bins = np.linspace(0.0, 1.0, n_bins + 1)
-    idx  = np.digitize(probs, bins) - 1
-    ece = 0.0
-    for b in range(n_bins):
-        mask = (idx == b)
-        if mask.any():
-            conf = probs[mask].mean()
-            accb = y_true[mask].mean()
-            ece += abs(accb - conf) * mask.mean()
+    # ========================
+    # Calcolo metriche
+    # ========================
 
-    # Stampa compatta
-    print(f"Balanced Accuracy : {bal_acc:.3f}")
-    print(f"AUC               : {auc:.3f}")
-    print(f"Accuracy (score)  : {acc:.3f}")
-    print(f"KL Divergence     : {kl_div:.3f} (nats)")
-    print(f"Brier score       : {brier:.3f}")
-    print(f"Expected Cal. Loss: {ece:.3f}")
-    print(f"Test time (s)     : {secs:.3f}")
+    start = time.time()
 
-    metrics = {
-        "balanced_accuracy": float(bal_acc),
-        "auc": float(auc),
-        "accuracy": float(acc),
-        "kl_divergence": float(kl_div),
-        "brier": float(brier),
-        "ece": float(ece),
+    # Balanced Accuracy
+    bal_acc = metrics.balanced_accuracy_score(Y_true, Y_pred)
+
+    # F1 Score
+    f1 = metrics.f1_score(Y_true, Y_pred)
+
+    # ROC Curve + AUC
+    fpr, tpr, _ = metrics.roc_curve(Y_true, Y_prob, pos_label=1)
+    auc = metrics.auc(fpr, tpr)
+
+    # Brier Score
+    brier = metrics.brier_score_loss(Y_true, Y_prob)
+
+    # KL Divergence (tra distribuzioni empiriche di pred vs true)
+    eps = 1e-12
+    P = np.clip(Y_true.mean(), eps, 1 - eps)
+    Q = np.clip(Y_prob.mean(), eps, 1 - eps)
+    kl_div = np.sum([P * np.log(P / Q) + (1 - P) * np.log((1 - P) / (1 - Q))])
+
+    # Expected Calibration Loss
+    ec_loss = expected_calibration_loss(Y_true, Y_prob)
+
+    inference_time = time.time() - start
+
+    # ========================
+    # Output finale
+    # ========================
+    results = {
+        "Model": model_name,
+        "Balanced Accuracy": bal_acc,
+        "F1 Score": f1,
+        "AUC": auc,
+        "Brier Score": brier,
+        "KL Divergence": kl_div,
+        "Expected Calibration Loss": ec_loss,
+        "Inference Time (s)": inference_time
     }
-    # etichette finali
-    y_pred_labels = np.where(y_pred == 1, str(pos_label), f"not_{pos_label}")
-    return y_pred_labels, probs, metrics, secs
+
+    return results
