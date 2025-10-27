@@ -1,13 +1,40 @@
 import DiscreteStructureLearning
 import Inference
-import KBinsDiscretizer
+import KbinsDiscretizer
 import pandas as ps
 import numpy as np
 import bnlearn as bn
 
-def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins, method, scoring_f, max_iter, naive=False)
+def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins,  naive=False):
     
-    # --------------------------
+    """
+    Full Bayesian Network pipeline: discretization, structure learning (or naive),
+    parameter learning, and inference evaluation.
+
+    Parameters
+    ----------
+    train_set : pd.DataFrame
+        Training dataset containing the target.
+    test_set : pd.DataFrame
+        Test dataset containing the target.
+    cont_columns : list
+        Continuous columns to discretize.
+    nbins : int
+        Number of bins per column for discretization.
+    method : str
+        Structure learning method (e.g., 'hc', 'pc').
+    scoring_f : str
+        Scoring function for structure learning (e.g., 'aic', 'bic').
+    max_iter : int
+        Max iterations for structure learning.
+    naive : bool
+        If True, build a Naive Bayes DAG manually.
+
+    Returns
+    -------
+    metrics : dict
+        Evaluation metrics from the inference step.
+    """
     # STEP 0: DISCRETIZATION
 
     # Fit the discretizer on the training set using cont_columns and nbins
@@ -17,36 +44,18 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins, method, sc
     test = discretize_transform(test_set, cont_columns, discretizer)
 
 
-    # --------------------------
-    # STEP 1: STRUCTURE LEARNING/NAIVE BAYES
+    # STEP 1:
 
     if naive: 
+
         # Define edges 
-        features = [col for col in train.columns if col != 'target']
+        features = [col for col in train_set.columns if col != 'target']
         edges = [(f, 'target') for f in features]
 
         # Make DAG
         structure = bn.make_DAG(edges)
 
     else: 
-        # Learn structure
-        structure = structure_learning(train, method, scoring_f, max_iter, visualise_structure=False)
-
-
-    # --------------------------
-    # STEP 2: PARAMETER LEARNING
-
-    # Learn parameters
-    model = bn.parameter_learning.fit(structure, train)
-
-
-    # --------------------------
-    # STEP 3: INFERENCE
-    if naive: 
-        metrics = infer_and_evaluate(test, model, model_name='NaiveBayes')
-
-    else:
-        metrics = infer_and_evaluate(test, model, model_name='BayesianNetwork')
+        structure = structure_learning(train_set, "hc", "bic", 2000000, dataset_name="Heart", visualise_structure=False)
 
     
-    return metrics
