@@ -17,7 +17,7 @@ def save_structure(edges, title, file_name, color):
 
 
 def structure_learning(training_data, method_type="hc", scoring_function="bic" ,max_iterations=200000, visualise_structure=True, dataset_name="dataset", color='lightskyblue'):
-    model = bn.structure_learning.fit(training_data, methodtype=method_type, scoretype=scoring_function, max_iter=max_iterations)
+    model = bn.structure_learning.fit(training_data, methodtype=method_type, scoretype=scoring_function, max_iter=max_iterations, verbose=0)
     print("model [%s]=%s" % (method_type, model))
     print("num_model_edges [%s]=%s" % (method_type, len(model['model_edges'])))
 

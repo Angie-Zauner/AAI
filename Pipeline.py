@@ -69,7 +69,7 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, metho
 
     #BayesianNetwork
     else: 
-        structure = structure_learning(train, method, scoring, max_iter, visualise_structure=False, verbose=0)
+        structure = structure_learning(train, method, scoring, max_iter, visualise_structure=False)
     
     #---------------------------
     # STEP 2: PARAMETER LEARNING
