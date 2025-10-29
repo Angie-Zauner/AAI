@@ -5,7 +5,7 @@ import bnlearn as bn
 from sklearn import metrics
 from sklearn.calibration import calibration_curve
 
-def infer_and_evaluate(test_set, model, model_name='BayesianNetwork', labels = False):
+def infer_and_evaluate(test_set, model, train_time, model_name='BayesianNetwork', labels = False):
 
     # Expected Calibration Loss
     def expected_calibration_loss(y_true, y_prob, n_bins=None):
@@ -69,6 +69,7 @@ def infer_and_evaluate(test_set, model, model_name='BayesianNetwork', labels = F
         "Brier Score": round(brier, 4),
         "KL Divergence": round(float(kl_div), 4),
         "Expected Calibration Loss": round(float(ec_loss), 4),
+        "Training Time (s)": f"{round(train_time, 4)} s",
         "Inference Time (s)": f"{round(inference_time, 4)} s"
     }
 

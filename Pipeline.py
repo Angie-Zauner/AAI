@@ -4,8 +4,9 @@ from KbinsDiscretizer import *
 import pandas as ps
 import numpy as np
 import bnlearn as bn
+import time
 
-def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins, method, scoring, max_iter, naive=False):
+def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, method='hc', scoring='aic', max_iter = 200000, naive=False):
     
     """
     Full Bayesian Network pipeline: discretization, structure learning (or naive),
@@ -35,9 +36,13 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins, method, sc
     metrics : dict
         Evaluation metrics from the inference step.
     """
+    # Initialize nbins to be 3 for each column if not specified
+    if not nbins:
+        nbins = [3 for i in len(cont_columns)]
 
     #-----------------------
     # STEP 0: DISCRETIZATION
+    start_train = time.time()
 
     # Fit the discretizer on the training set using cont_columns and nbins
     discretizer, train = discretize_fit(train_set, cont_columns, nbins, transform=True)
@@ -69,6 +74,7 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins, method, sc
     # Learn parameters
     model = bn.parameter_learning.fit(structure, train)
 
+    train_time = time.time() - start_train
 
     #---------------------------
     # STEP 3: INFERENCE
@@ -77,6 +83,6 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins, method, sc
         metrics = infer_and_evaluate(test, model, model_name='NaiveBayes')
 
     else:
-        metrics = infer_and_evaluate(test, model, model_name='BayesianNetwork')
+        metrics = infer_and_evaluate(test, model, train_time, model_name='BayesianNetwork')
     
     return metrics
