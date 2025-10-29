@@ -52,7 +52,7 @@ def plot_fold_metrics(fold_results, metric_keys=None, palette="tab10"):
     n_folds = len(next(iter(fold_results.values()))[metric_keys[0]])
     
     # Color palette
-    colors = sns.color_palette(palette, colors=len(scoring_list))
+    colors = sns.color_palette(palette, n_colors=len(scoring_list))
     
     # Create a plot for each metric
     for metric in metric_keys:
