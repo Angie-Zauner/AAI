@@ -5,6 +5,10 @@ import pandas as ps
 import numpy as np
 import bnlearn as bn
 import time
+import os
+import sys
+import contextlib
+
 
 def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, method='hc', scoring='aic', max_iter = 200000, naive=False):
     
@@ -66,7 +70,6 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, metho
     #BayesianNetwork
     else: 
         structure = structure_learning(train, method, scoring, max_iter, visualise_structure=False, verbose=0)
-
     
     #---------------------------
     # STEP 2: PARAMETER LEARNING
@@ -80,7 +83,7 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, metho
     # STEP 3: INFERENCE
     
     if naive:
-        metrics = infer_and_evaluate(test, model, model_name='NaiveBayes')
+        metrics = infer_and_evaluate(test, model, train_time, model_name='NaiveBayes')
 
     else:
         metrics = infer_and_evaluate(test, model, train_time, model_name='BayesianNetwork')
