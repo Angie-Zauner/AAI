@@ -75,7 +75,7 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, metho
     # STEP 2: PARAMETER LEARNING
 
     # Learn parameters
-    model = bn.parameter_learning.fit(structure, train)
+    model = bn.parameter_learning.fit(structure, train, verbose = 0)
 
     train_time = time.time() - start_train
 
