@@ -30,7 +30,7 @@ def plot_distributions(df, columns, ncol=4, color="lightskyblue"):
     plt.show()
 
 
-def plot_fold_metrics(fold_results, metric_keys=None, palette="tab10"):
+def plot_fold_metrics(fold_results, n_folds, metric_keys=None, palette="tab10"):
     """
     Generates line plots of fold values for each metric.
     
@@ -49,7 +49,6 @@ def plot_fold_metrics(fold_results, metric_keys=None, palette="tab10"):
     # Number of folds (take from the first scoring and first metric)
     if metric_keys is None:
         metric_keys = list(fold_results[scoring_list[0]].keys())
-    n_folds = len(next(iter(fold_results.values()))[metric_keys[0]])
     
     # Color palette
     colors = sns.color_palette(palette, n_colors=len(scoring_list))

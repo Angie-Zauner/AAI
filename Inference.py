@@ -54,7 +54,7 @@ def infer_and_evaluate(test_set, model, train_time, model_name='BayesianNetwork'
     # KL Divergence (tra distribuzioni empiriche di pred vs true)
     eps = 1e-12
     P = np.clip(y_true.mean(), eps, 1 - eps)
-    Q = np.clip(y_true.mean(), eps, 1 - eps)
+    Q = np.clip(y_probs.mean(), eps, 1 - eps)
     kl_div = np.sum([P * np.log(P / Q) + (1 - P) * np.log((1 - P) / (1 - Q))])
 
     # Expected Calibration Loss
