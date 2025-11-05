@@ -27,8 +27,10 @@ def infer_and_evaluate(test_set, model, train_time, model_name='BayesianNetwork'
 
     start = time.time()
 
+    X_test = test_set.drop(columns=['target'])
+
     # Predict
-    prediction = bn.predict(model, test_set, variables=['target'])
+    prediction = bn.predict(model, X_test, variables=['target'])
 
     inference_time = time.time() - start
 

@@ -1,6 +1,7 @@
 import bnlearn as bn
 import pandas as pd
 import networkx as nx
+import os
 import matplotlib.pyplot as plt
 
 
@@ -24,6 +25,11 @@ def structure_learning(training_data, method_type="hc", scoring_function="bic" ,
     # visualise the learnt structure
     if visualise_structure:
         title = "Learnt Structure %s" % (method_type)
+        
+        # Create 'structures' folder if necessary 
+        config_dir = os.path.join(os.getcwd(), "structures")
+        os.makedirs(config_dir, exist_ok=True)
+        
         save_structure(model['model_edges'], title, "structures/%s-%s-%s-DAG.png" % (dataset_name, method_type, scoring_function), color)
     
     return model
