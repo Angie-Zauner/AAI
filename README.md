@@ -1,10 +1,4 @@
-
-from gpytorch_GPR import GPR
-
-# Esegui
-gpr = GPR('train.csv', 'test.csv')
-
-# Accedi ai risultati
-print(gpr.results)
-print(gpr.results['Balanced Accuracy'])
-print(gpr.results['Y_pred'])
+- runna cross val per fraud
+- runna best model di nuovo
+- togli le cose superflue da gpr
+- togli le cose superflue da gprutil
