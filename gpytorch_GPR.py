@@ -59,9 +59,15 @@ class GPR():
     USE_MACKAY_APPROXIMATION = False
     GP_METHOD2EMPLOY = 'GPR_VarSparse' # choices are 'GPR', 'GPR_Sparse', 'GPR_VarSparse'
     NUM_INDUCING_POINTS= 20 # for GPR_Sparse and GPR_VarSparse
-    VERBOSE = True
+    VERBOSE = False
 
-    def __init__(self, datafile_train, datafile_test):
+    def __init__(self, datafile_train, datafile_test,STANDARDISE_DATA=True, GP_METHOD2EMPLOY='GPR_VarSparse', NUM_INDUCING_POINTS=20):
+        
+        # Update parameters
+        self.STANDARDISE_DATA = STANDARDISE_DATA
+        self.GP_METHOD2EMPLOY = GP_METHOD2EMPLOY
+        self.NUM_INDUCING_POINTS = NUM_INDUCING_POINTS
+
         # Load training and test data from two separate CVS files
         X_train, Y_train = self.load_data(datafile_train, False) # False to use all training data
         X_test, Y_test = self.load_data(datafile_test, False) # False to use the entire test set
