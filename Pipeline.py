@@ -27,7 +27,7 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, metho
     nbins : int
         Number of bins per column for discretization.
     method : str
-        Structure learning method (e.g., 'hc', 'pc').
+        Structure learning method (e.g., 'hc', 'cl').
     scoring_f : str
         Scoring function for structure learning (e.g., 'aic', 'bic').
     max_iter : int
