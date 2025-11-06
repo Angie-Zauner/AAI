@@ -1,23 +1,3 @@
-#############################################################################
-# gpytorch_GPR.py
-#
-# Implements functionality for Gaussian Process classification via GP regression (GPR).
-# It is powered by GPyTorch: https://docs.gpytorch.ai/en/stable/
-#
-# This program is a baseline classifier with class predictions derived from
-# estimated mean vector and covariance matrices of a GPR using a normalised ratio.
-# 
-# This program supports Approximate inference via maximising the Evidence Lower 
-# Bound (ELBO) to optimise kernel, likelihood, and inducing points.
-#
-# This program can run on CPU or GPU devices, as detected at runtime.
-#
-# Version: 1.0, Date: 25 October 2024, functionality tested on multiple datasets
-#               for binary classification -- and coupled with ModelEvaluator.py 
-# Version: 1.1, Date: 26 October 2024, support for plotting data in 3D.
-# Version: 1.3, Date: 30 October 2025, support for GPR with approximate inference.
-# Contact: hcuayahuitl@lincoln.ac.uk
-#############################################################################
 
 import sys
 import time
