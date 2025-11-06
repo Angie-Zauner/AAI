@@ -5,33 +5,16 @@
 # It is powered by GPyTorch: https://docs.gpytorch.ai/en/stable/
 #
 # This program is a baseline classifier with class predictions derived from
-# estimated mean vector and covariance matrices of a GPR according to
-# p(y=1|x) = sigma(mean / sqrt(1 + (pi * variance) / 8))
-# where:
-# - p(y=1|x) is the probability that y=1 at input x
-# - mean is the posterior mean of f(x) from the GPR model
-# - variance is the posterior variance of f(x) including likelihood noise
-# - f(x) is the latent function value at x, drawn from f~GP(m(x), k(x, x'))
-#   with mean function m(x) and kernel function k(x, x').
+# estimated mean vector and covariance matrices of a GPR using a normalised ratio.
 # 
-# This program also implements a simpler classification approximation by using
-# the predicted means and variances of a GPR using a normalised ratio.
-# 
-# This program supports Exact and Approximate inference. The former is done via
-# maximising the Marginal Log Likelihood (MLL) to optimise lengthscale, outputscale, noise; 
-# and the later is done via maximising the Evidence Lower Bound (ELBO) to optimise
-# kernel, likelihood, and inducing points.
-#
-# Reference for MacKay's approximation: 
-# https://scispace.com/pdf/the-evidence-framework-applied-to-classification-networks-1qz5v2vg5c.pdf
+# This program supports Approximate inference via maximising the Evidence Lower 
+# Bound (ELBO) to optimise kernel, likelihood, and inducing points.
 #
 # This program can run on CPU or GPU devices, as detected at runtime.
 #
 # Version: 1.0, Date: 25 October 2024, functionality tested on multiple datasets
 #               for binary classification -- and coupled with ModelEvaluator.py 
 # Version: 1.1, Date: 26 October 2024, support for plotting data in 3D.
-# Version: 1.2, Date: 23 October 2025, implements MacKay approximation, see class
-#               GPRegressionModel and function predict_probability().
 # Version: 1.3, Date: 30 October 2025, support for GPR with approximate inference.
 # Contact: hcuayahuitl@lincoln.ac.uk
 #############################################################################
@@ -56,12 +39,12 @@ class GPR():
     STANDARDISE_DATA = True
     LEARNING_RATE = 0.10
     MAX_NUM_EPOCHS = 1000
-    USE_MACKAY_APPROXIMATION = False
-    GP_METHOD2EMPLOY = 'GPR_VarSparse' # choices are 'GPR', 'GPR_Sparse', 'GPR_VarSparse'
+    GP_METHOD2EMPLOY = 'GPR_VarSparse' # choices are 'GPR_Sparse', 'GPR_VarSparse'
     NUM_INDUCING_POINTS= 20 # for GPR_Sparse and GPR_VarSparse
     VERBOSE = False
+    SILENT = False # Set to True to suppress all print statements
 
-    def __init__(self, datafile_train, datafile_test,STANDARDISE_DATA=True, GP_METHOD2EMPLOY='GPR_VarSparse', NUM_INDUCING_POINTS=20):
+    def __init__(self, datafile_train, datafile_test, STANDARDISE_DATA=True, GP_METHOD2EMPLOY='GPR_VarSparse', NUM_INDUCING_POINTS=20):
         
         # Update parameters
         self.STANDARDISE_DATA = STANDARDISE_DATA
@@ -84,7 +67,7 @@ class GPR():
         X_test = torch.Tensor(X_test)
         Y_test = torch.Tensor(Y_test.values)
 
-		# train GP model via regression and evaluate it with test data
+        # train GP model via regression and evaluate it with test data
         model, likelihood, training_time = self.train_GPR(X_train, Y_train)
         self.model, self.likelihood, self.results = self.evaluate_GPR(
             X_test, Y_test, model, likelihood, training_time, 
@@ -119,14 +102,6 @@ class GPR():
         e_val = -np.power((x-mean), 2)/(2*var)
         return (1/(np.sqrt(2*np.pi*var))) * np.exp(e_val)
     
-    # returns the predicted probabilities using the learnt factors for MacKay's approximation
-    def get_predicted_probabilities(self, X_train, model, likelihood):
-        if self.GP_METHOD2EMPLOY == 'GPR_VarSparse':
-            probs = model.predict_probability(X_train, likelihood)
-        else:
-            probs = model.predict_probability(X_train)
-        return probs
-    
     # print the optimised parameters after training
     def print_learnt_parameters(self, model, likelihood):
         print("\nGaussian Process learnt parameters (after optimisation):")
@@ -134,7 +109,7 @@ class GPR():
             print("Lengthscale=%s" % (model.covar_module.base_kernel.base_kernel.lengthscale.item()))
             print("Outputscale=%s" % (model.covar_module.base_kernel.outputscale.item()))
 
-        else: # in the case of 'GPR' or 'GPR_VarSparse'
+        else: # in the case of 'GPR_VarSparse'
             print("Lengthscale=%s" % (model.covar_module.base_kernel.lengthscale.item()))
             print("Outputscale=%s" % (model.covar_module.outputscale.item()))
         
@@ -159,21 +134,18 @@ class GPR():
         else:
             print("Noise=%s" % (model.likelihood.noise.item()))
 
-    # training procedure for the GPR, which trains two sets of parameters:
-    # (1) the mean and covariance, and (2) the learnable factors for MacKay's approximation.
+    # training procedure for the GPR
     def train_GPR(self, X_train, y_train):
         print("\nTRAINING Gaussian Process model...")
-        print("USE_MACKAY_APPROXIMATION=%s" % (self.USE_MACKAY_APPROXIMATION))
         training_time = time.time()
 
-        # PART 1
         # Initialise the likelihood and model. Whilst the former defines the noise, 
         # the later is used to learn the mean vector and covariance matrix. 
         likelihood = gpytorch.likelihoods.GaussianLikelihood().to(self.device)
         es = EarlyStopping() # to interrupt training when convergence has been reached
 
         # the model is created based on the type of GP selected in GP_METHOD2EMPLOY
-        if self.GP_METHOD2EMPLOY == 'GPR' or self.GP_METHOD2EMPLOY == 'GPR_Sparse': 
+        if self.GP_METHOD2EMPLOY == 'GPR_Sparse': 
             model = GPRegressionModel(X_train, y_train, likelihood, self.GP_METHOD2EMPLOY, self.NUM_INDUCING_POINTS).to(self.device)
 
             # optimiser for the GP model via the MLL loss function
@@ -212,66 +184,65 @@ class GPR():
         if self.VERBOSE:
             self.print_learnt_parameters(model, likelihood) # once tranining of model & likelihood is done
 
-        # PART 2 - only needed for MacKay's approximation
-        if self.USE_MACKAY_APPROXIMATION:
-            # freeze GPR model training -- to focus on learning the scaling factors
-            for params in model.mean_module.parameters(): params.requires_grad = False
-            for params in model.covar_module.parameters(): params.requires_grad = False
-
-            # optimiser for the GP learnable factors via the Binary Cross Entropy loss function
-            print("\nLoss function: Binary Cross Entropy (BCE)")
-            optimiser2 = torch.optim.Adam([model.a, model.b, model.c], self.LEARNING_RATE)
-            bce = torch.nn.BCELoss()
-
-            es.reset() # reset early stopping
-
-            # training loop for the learnable factors (self.a, self.b, self.c)
-            for i in range(self.MAX_NUM_EPOCHS):
-                optimiser2.zero_grad()
-                probs = self.get_predicted_probabilities(X_train, model, likelihood)
-                loss = bce(probs, y_train)
-                loss.backward()
-                optimiser2.step()
-                if es.check_early_stopping(i, loss.item()):
-                    break
-
-            print("Scaling factors a=%s, b=%s, c=%s" % (model.a.item(), model.b.item(), model.c.item()))
-
         training_time = time.time() - training_time
         return model, likelihood, training_time
 
     
     def evaluate_GPR(self, X_test, Y_test, model, likelihood, training_time, model_name="GPR", return_predictions=False):
+        """
+        Evaluates the trained GP model on test data and computes comprehensive metrics.
+        
+        Args:
+            X_test: Test input features
+            Y_test: True test labels (binary: 0 or 1)
+            model: Trained GP model
+            likelihood: Trained likelihood function
+            training_time: Time taken to train the model (in seconds)
+            model_name: Name identifier for the model (default: "GPR")
+            return_predictions: If True, includes predictions in the results dictionary
+        
+        Returns:
+            tuple: (model, likelihood, results_dict) where results_dict contains:
+                - Discrimination metrics: Balanced Accuracy, F1 Score, AUC
+                - Calibration metrics: Brier Score, KL Divergence, Expected Calibration Loss
+                - Timing information: Training Time, Inference Time
+                - Optional: Y_pred (binary predictions), Y_prob (probability predictions)
+        """
         from sklearn.metrics import balanced_accuracy_score, f1_score, roc_auc_score, brier_score_loss
         
         print("\nEVALUATING Gaussian Process model...")
-        print("USE_MACKAY_APPROXIMATION=%s" % (self.USE_MACKAY_APPROXIMATION))
         test_time = time.time()
+        
+        # Set model and likelihood to evaluation mode (disables dropout, batchnorm, etc.)
         model.eval()
         likelihood.eval()
 
+        # Prepare ground truth labels
         Y_true = Y_test.cpu().numpy() if torch.is_tensor(Y_test) else Y_test.values
-        Y_pred = []
-        Y_prob = []
+        Y_pred = []  # Binary predictions (0 or 1)
+        Y_prob = []  # Probability predictions P(y=1|x)
         
-        for values in X_test: # individual predictions over the test set
+        # INFERENCE LOOP: Generate predictions for each test instance
+        for values in X_test:
             test_case = torch.Tensor(np.array([values])).to(self.device)
             
-            if self.USE_MACKAY_APPROXIMATION:
-                prob = self.get_predicted_probabilities(test_case, model, likelihood) 
-                prob = prob.cpu().item() # numpy value
-            
-            else: # normalised likelihood ratio
-                with torch.no_grad(), gpytorch.settings.fast_pred_var():
-                    predictions = likelihood(model(test_case))
-                    pred_mean = predictions.mean.item()
-                    pred_var = predictions.variance.item()
-                    pdf_1 = self.get_gaussian_probability_density(1, pred_mean, pred_var)
-                    pdf_0 = self.get_gaussian_probability_density(0, pred_mean, pred_var)
-                    prob = pdf_1 / (pdf_1 + pdf_0)
+            # Compute probability using normalised likelihood ratio:
+            # P(y=1|x) = p(1|μ,σ²) / [p(1|μ,σ²) + p(0|μ,σ²)]
+            # where p(y|μ,σ²) is the Gaussian probability density at y given posterior mean μ and variance σ²
+            with torch.no_grad(), gpytorch.settings.fast_pred_var():
+                predictions = likelihood(model(test_case))
+                pred_mean = predictions.mean.item()      # Posterior mean μ
+                pred_var = predictions.variance.item()   # Posterior variance σ²
+                
+                # Calculate Gaussian PDF at y=1 and y=0
+                pdf_1 = self.get_gaussian_probability_density(1, pred_mean, pred_var)
+                pdf_0 = self.get_gaussian_probability_density(0, pred_mean, pred_var)
+                
+                # Normalised ratio gives P(y=1|x)
+                prob = pdf_1 / (pdf_1 + pdf_0)
 
             Y_prob.append(prob)
-            Y_pred.append(np.round(prob))
+            Y_pred.append(np.round(prob))  # Threshold at 0.5 for binary prediction
 
         test_time = time.time() - test_time
         
@@ -325,14 +296,3 @@ class GPR():
             results["Y_prob"] = Y_prob
         
         return model, likelihood, results
-
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("USAGE: gpytorch_GPR.py [train_file.csv] [test_file.csv]")
-        print("EXAMPLE> gpytorch_GPR.py data_banknote_authentication-train.csv data_banknote_authentication-test.csv")
-        exit(0)
-    else:
-        datafile_train = sys.argv[1]
-        datafile_test = sys.argv[2]
-        GPR(datafile_train, datafile_test)
