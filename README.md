@@ -1,4 +1,1 @@
-- runna cross val per fraud
-- runna best model di nuovo
-- togli le cose superflue da gpr
-- togli le cose superflue da gprutil
+
