@@ -17,7 +17,7 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, metho
     parameter learning, and inference evaluation.
 
     Parameters
-    ----------
+
     train_set : pd.DataFrame
         Training dataset containing the target.
     test_set : pd.DataFrame
@@ -36,7 +36,7 @@ def BayesianNetworkPipeline(train_set, test_set, cont_columns, nbins=None, metho
         If True, build a Naive Bayes DAG manually.
 
     Returns
-    -------
+
     metrics : dict
         Evaluation metrics from the inference step.
     """

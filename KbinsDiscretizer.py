@@ -24,13 +24,16 @@ def discretize_fit(df, columns, nbins, transform = False):
     if missing:
         raise ValueError(f"Columns not found in DataFrame: {missing}")
     
+    # All columns are numeric
     non_numeric = [c for c in columns if not pd.api.types.is_numeric_dtype(df[c])]
     if non_numeric:
         raise ValueError(f"The following columns are not numeric: {non_numeric}")
     
+    # No NaN
     if df[columns].isna().any().any():
         raise ValueError("There are NaN values in the columns to discretize. Please impute or remove them first.")
     
+    # Number of bins matches number of columns to discretize
     if not isinstance(nbins, (list, tuple)) or len(nbins) != len(columns):
         raise ValueError("`nbins` must be a list or tuple with the same length as `columns`.")
     
@@ -68,10 +71,12 @@ def discretize_transform(df, columns, discretizer):
     if missing:
         raise ValueError(f"Columns not found in DataFrame: {missing}")
     
+    # All columns are numeric
     non_numeric = [c for c in columns if not pd.api.types.is_numeric_dtype(df[c])]
     if non_numeric:
         raise ValueError(f"The following columns are not numeric: {non_numeric}")
     
+    # No NaN
     if df[columns].isna().any().any():
         raise ValueError("There are NaN values in the columns to discretize. Please impute or remove them first.")
 

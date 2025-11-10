@@ -4,6 +4,17 @@ import os
 def generate_config(structure, name='config', filename=None):
     """
     Generates a configuration file for a bayesian net.
+
+    Parameters
+
+    structure : dict
+        Dictionary containing the structure of the Bayesian Network.
+
+    name : str, optional, default='config'
+        Name of the configuration (used as the header and default filename).
+
+    filename : str, optional
+        Name of the output file. If not provided, defaults to '{name}.txt'.
     """
 
     if not filename:

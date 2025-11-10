@@ -35,10 +35,11 @@ def plot_fold_metrics(fold_results, n_folds, metric_keys=None, palette="tab10"):
     Generates line plots of fold values for each metric.
     
     Parameters
-    ----------
+    
     fold_results : dict
         Dictionary with structure:
         fold_results[scoring][metric] = list of values for each fold
+    
     metric_keys : list, optional
         List of metrics to plot. If None, uses all keys from the first scoring.
     """

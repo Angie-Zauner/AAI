@@ -7,6 +7,41 @@ from sklearn.calibration import calibration_curve
 
 def infer_and_evaluate(test_set, model, train_time, model_name='BayesianNetwork', labels = False):
 
+    """
+    Perform inference and evaluate a Bayesian Network model on a test set.
+
+    Parameters
+
+    test_set : pandas.DataFrame
+
+    model : dict
+        Learnt Bayesian Model, as returned by `bnlearn`. 
+
+    train_time : float
+        Training time in seconds.
+
+    model_name : str, optional, default='BayesianNetwork'
+
+    labels : bool, optional, default=False
+        If True, the function returns also `y_pred` and `y_probs`.
+
+    Returns
+
+    results : dict
+        Dictionary containing:
+            - 'Balanced Accuracy'
+            - 'F1 Score'
+            - 'AUC'
+            - 'Brier Score'
+            - 'KL Divergence'
+            - 'Expected Calibration Loss'
+            - 'Training Time (s)'
+            - 'Inference Time (s)'
+
+    (results, y_pred, y_probs) : tuple
+        Returned if `labels=True`.
+    """
+
     # Expected Calibration Loss
     def expected_calibration_loss(y_true, y_prob, n_bins=None):
         if n_bins is None:
