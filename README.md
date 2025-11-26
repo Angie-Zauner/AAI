@@ -1,4 +1,4 @@
-# **Ferrari Feedback Analysis**
+# **Bayesian Inference**
 
 ### **Angelica Zauner**
 **Contatti**
