@@ -1,5 +1,5 @@
 # **Bayesian Inference**
-
+**Developed as part of the assessment for the Advanced Artificial Intelligence course** 
 ### **Angelica Zauner**
 **Contatti**
 
